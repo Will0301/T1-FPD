@@ -1,34 +1,58 @@
-// main.go - Loop principal do jogo
 package main
 
-import "os"
+import (
+	"os"
+)
 
 func main() {
-	// Inicializa a interface (termbox)
 	interfaceIniciar()
 	defer interfaceFinalizar()
 
-	// Usa "mapa.txt" como arquivo padrão ou lê o primeiro argumento
 	mapaFile := "mapa.txt"
 	if len(os.Args) > 1 {
 		mapaFile = os.Args[1]
 	}
 
-	// Inicializa o jogo
 	jogo := jogoNovo()
 	if err := jogoCarregarMapa(mapaFile, &jogo); err != nil {
 		panic(err)
 	}
 
-	// Desenha o estado inicial do jogo
+	// Inicia processador
+	go processaJogo(&jogo)
+
 	interfaceDesenharJogo(&jogo)
 
-	// Loop principal de entrada
 	for {
 		evento := interfaceLerEventoTeclado()
-		if continuar := personagemExecutarAcao(evento, &jogo); !continuar {
+
+		if !personagemExecutarAcao(evento, &jogo) {
 			break
 		}
+
+		// A vida do personagem não mudava porque o símbolo do mapa era sobrescrito
+		// antes de ser verificado. A correção é verificar o elemento que o personagem
+		// acabou de pisar, que está armazenado em "UltimoVisitado".
+		if jogo.UltimoVisitado.simbolo == 'x' {
+			res := make(chan bool)
+			canalJogo <- AcoesJogo{Acao: "dano", Valor: 3, Resposta: res}
+			<-res
+		}
+
+		// Verifica se o jogador se moveu para um ponto de cura
+		if jogo.UltimoVisitado.simbolo == '♥' {
+			curar(&jogo)
+		}
+
 		interfaceDesenharJogo(&jogo)
+
+		// Verifica se a vida chegou a 0 para encerrar o jogo
+		jogo.mu.RLock()
+		if jogo.Vida <= 0 {
+			jogo.mu.RUnlock()
+			gameOver(&jogo)
+			return
+		}
+		jogo.mu.RUnlock()
 	}
 }

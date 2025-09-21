@@ -3,39 +3,69 @@ package main
 
 import (
 	"bufio"
+	"math/rand"
 	"os"
+	"strconv"
+	"sync"
+	"time"
+
+	"github.com/nsf/termbox-go"
 )
 
 // Elemento representa qualquer objeto do mapa (parede, personagem, vegetação, etc)
 type Elemento struct {
-	simbolo   rune
-	cor       Cor
-	corFundo  Cor
-	tangivel  bool // Indica se o elemento bloqueia passagem
+	simbolo  rune
+	cor      Cor
+	corFundo Cor
+	tangivel bool // Indica se o elemento bloqueia passagem
+}
+
+// Ação que são feitas sobre o jogador ou Inimigo
+type AcoesJogo struct {
+	X, Y     int
+	Acao     string // "dano", "cura"
+	Valor    int    // quantidade de HP a aplicar
+	Resposta chan bool
+}
+
+type Boneco struct {
+	simbolo  rune
+	cor      Cor
+	corFundo Cor
+	tangivel bool
 }
 
 // Jogo contém o estado atual do jogo
 type Jogo struct {
-	Mapa            [][]Elemento // grade 2D representando o mapa
-	PosX, PosY      int          // posição atual do personagem
-	UltimoVisitado  Elemento     // elemento que estava na posição do personagem antes de mover
-	StatusMsg       string       // mensagem para a barra de status
+	Mapa           [][]Elemento // grade 2D representando o mapa
+	PosX, PosY     int          // posição atual do personagem
+	UltimoVisitado Elemento     // elemento que estava na posição do personagem antes de mover
+	StatusMsg      string       // mensagem para a barra de status
+	Vida           int
+
+	mu sync.RWMutex
 }
+
+// Canal de comunicação
+var canalJogo = make(chan AcoesJogo)
 
 // Elementos visuais do jogo
 var (
-	Personagem = Elemento{'☺', CorCinzaEscuro, CorPadrao, true}
+	Personagem = Boneco{'☺', termbox.ColorCyan, CorPadrao, true}
 	Inimigo    = Elemento{'☠', CorVermelho, CorPadrao, true}
 	Parede     = Elemento{'▤', CorParede, CorFundoParede, true}
 	Vegetacao  = Elemento{'♣', CorVerde, CorPadrao, false}
 	Vazio      = Elemento{' ', CorPadrao, CorPadrao, false}
+	Armadilha  = Elemento{'x', termbox.ColorRed, termbox.ColorDefault, false}
+	Cura       = Elemento{'♥', termbox.ColorGreen, termbox.ColorDefault, false}
 )
 
 // Cria e retorna uma nova instância do jogo
 func jogoNovo() Jogo {
 	// O ultimo elemento visitado é inicializado como vazio
 	// pois o jogo começa com o personagem em uma posição vazia
-	return Jogo{UltimoVisitado: Vazio}
+	return Jogo{UltimoVisitado: Vazio,
+		Vida: 10}
 }
 
 // Lê um arquivo texto linha por linha e constrói o mapa do jogo
@@ -71,6 +101,18 @@ func jogoCarregarMapa(nome string, jogo *Jogo) error {
 	if err := scanner.Err(); err != nil {
 		return err
 	}
+
+	// Semeia o gerador de números aleatórios
+	rand.Seed(time.Now().UnixNano())
+
+	// Adiciona as armadilhas e pontos de cura em posições aleatórias
+	for i := 0; i < 6; i++ {
+		posicionarAleatoriamente(jogo, Armadilha)
+	}
+	for i := 0; i < 3; i++ {
+		posicionarAleatoriamente(jogo, Cura)
+	}
+
 	return nil
 }
 
@@ -102,7 +144,96 @@ func jogoMoverElemento(jogo *Jogo, x, y, dx, dy int) {
 	// Obtem elemento atual na posição
 	elemento := jogo.Mapa[y][x] // guarda o conteúdo atual da posição
 
-	jogo.Mapa[y][x] = jogo.UltimoVisitado     // restaura o conteúdo anterior
-	jogo.UltimoVisitado = jogo.Mapa[ny][nx]   // guarda o conteúdo atual da nova posição
-	jogo.Mapa[ny][nx] = elemento              // move o elemento
+	jogo.Mapa[y][x] = jogo.UltimoVisitado   // restaura o conteúdo anterior
+	jogo.UltimoVisitado = jogo.Mapa[ny][nx] // guarda o conteúdo atual da nova posição
+	jogo.Mapa[ny][nx] = elemento            // move o elemento
+}
+
+// Processa as requisições recebidas pelo canalJogo e atualiza o estado do jogo
+func processaJogo(jogo *Jogo) {
+	for req := range canalJogo {
+		jogo.mu.Lock()
+		switch req.Acao {
+		case "dano":
+			jogo.Vida -= req.Valor
+			if jogo.Vida < 0 {
+				jogo.Vida = 0
+			}
+		case "cura":
+			jogo.Vida += req.Valor
+			if jogo.Vida > 10 {
+				jogo.Vida = 10
+			}
+		}
+		jogo.mu.Unlock()
+		req.Resposta <- true
+	}
+}
+
+func curar(jogo *Jogo) {
+	curaX, curaY := jogo.PosX, jogo.PosY
+
+	go func() {
+		jogo.StatusMsg = "Você está em um ponto de cura! Aguarde 3s para começar a curar..."
+		interfaceDesenharJogo(jogo)
+
+		time.Sleep(3 * time.Second)
+
+		for {
+			jogo.mu.RLock()
+			vidaAtual := jogo.Vida
+			posAtualX, posAtualY := jogo.PosX, jogo.PosY
+			jogo.mu.RUnlock()
+
+			if (posAtualX != curaX || posAtualY != curaY) || vidaAtual >= 10 {
+				if vidaAtual >= 10 {
+					jogo.StatusMsg = "Vida totalmente restaurada!"
+				} else {
+					jogo.StatusMsg = "Você saiu do ponto de cura."
+				}
+				interfaceDesenharJogo(jogo)
+				return
+			}
+
+			// Envia o pedido de cura.
+			res := make(chan bool)
+			canalJogo <- AcoesJogo{Acao: "cura", Valor: 1, Resposta: res}
+			<-res
+
+			jogo.mu.RLock()
+			vidaAtual = jogo.Vida
+			jogo.mu.RUnlock()
+			jogo.StatusMsg = "Curando... Vida: " + strconv.Itoa(vidaAtual)
+			interfaceDesenharJogo(jogo)
+
+			time.Sleep(1 * time.Second)
+		}
+	}()
+}
+
+func gameOver(jogo *Jogo) {
+	jogo.mu.Lock()
+	jogo.StatusMsg = "GAME OVER! Pressione ESC para sair."
+	jogo.mu.Unlock()
+	interfaceDesenharJogo(jogo)
+
+	for {
+		ev := interfaceLerEventoTeclado()
+		if ev.Tipo == "sair" {
+			return
+		}
+	}
+}
+
+func posicionarAleatoriamente(jogo *Jogo, elemento Elemento) {
+	for {
+		y := rand.Intn(len(jogo.Mapa))
+		x := rand.Intn(len(jogo.Mapa[0]))
+
+		// Verifica se a posição está vazia
+		if jogo.Mapa[y][x].simbolo == Vazio.simbolo {
+			jogo.Mapa[y][x] = elemento
+			return
+		}
+	}
 }
