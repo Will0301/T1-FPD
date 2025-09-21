@@ -6,6 +6,8 @@
 package main
 
 import (
+	"strconv"
+
 	"github.com/nsf/termbox-go"
 )
 
@@ -14,13 +16,13 @@ type Cor = termbox.Attribute
 
 // Definições de cores utilizadas no jogo
 const (
-	CorPadrao     Cor = termbox.ColorDefault
-	CorCinzaEscuro    = termbox.ColorDarkGray
-	CorVermelho       = termbox.ColorRed
-	CorVerde          = termbox.ColorGreen
-	CorParede         = termbox.ColorBlack | termbox.AttrBold | termbox.AttrDim
-	CorFundoParede    = termbox.ColorDarkGray
-	CorTexto          = termbox.ColorDarkGray
+	CorPadrao      Cor = termbox.ColorDefault
+	CorCinzaEscuro     = termbox.ColorDarkGray
+	CorVermelho        = termbox.ColorRed
+	CorVerde           = termbox.ColorGreen
+	CorParede          = termbox.ColorBlack | termbox.AttrBold | termbox.AttrDim
+	CorFundoParede     = termbox.ColorDarkGray
+	CorTexto           = termbox.ColorDarkGray
 )
 
 // EventoTeclado representa uma ação detectada do teclado (como mover, sair ou interagir)
@@ -68,10 +70,13 @@ func interfaceDesenharJogo(jogo *Jogo) {
 	}
 
 	// Desenha o personagem sobre o mapa
-	interfaceDesenharElemento(jogo.PosX, jogo.PosY, Personagem)
+	interfaceDesenharPersonagem(jogo.PosX, jogo.PosY, Personagem)
 
 	// Desenha a barra de status
 	interfaceDesenharBarraDeStatus(jogo)
+
+	// Mostra a vida do boneco
+	interfaceMostraVida(jogo)
 
 	// Força a atualização do terminal
 	interfaceAtualizarTela()
@@ -92,6 +97,29 @@ func interfaceDesenharElemento(x, y int, elem Elemento) {
 	termbox.SetCell(x, y, elem.simbolo, elem.cor, elem.corFundo)
 }
 
+func interfaceDesenharPersonagem(x, y int, elem Boneco) {
+	termbox.SetCell(x, y, elem.simbolo, elem.cor, elem.corFundo)
+}
+
+// Exibe a vida do jogador na tela
+func interfaceMostraVida(jogo *Jogo) {
+	// Usa um RLock para leitura segura da variável compartilhada "Vida"
+	jogo.mu.RLock()
+	vidaStr := strconv.Itoa(jogo.Vida)
+	fg := CorVerde
+	if jogo.Vida <= 3 {
+		fg = CorVermelho
+	}
+	jogo.mu.RUnlock()
+
+	texto := "Vida: " + vidaStr
+	y := len(jogo.Mapa) + 2
+
+	for i, r := range []rune(texto) {
+		termbox.SetCell(i, y, r, fg, CorPadrao)
+	}
+}
+
 // Exibe uma barra de status com informações úteis ao jogador
 func interfaceDesenharBarraDeStatus(jogo *Jogo) {
 	// Linha de status dinâmica
@@ -105,4 +133,3 @@ func interfaceDesenharBarraDeStatus(jogo *Jogo) {
 		termbox.SetCell(i, len(jogo.Mapa)+3, c, CorTexto, CorPadrao)
 	}
 }
-
