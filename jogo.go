@@ -42,9 +42,12 @@ type Jogo struct {
 	UltimoVisitado Elemento     // elemento que estava na posição do personagem antes de mover
 	StatusMsg      string       // mensagem para a barra de status
 	Vida           int
+	ChaveCapturada bool
 
 	mu sync.RWMutex
 }
+
+var bausAbertos = 0
 
 // Canal de comunicação
 var canalJogo = make(chan AcoesJogo)
@@ -56,16 +59,18 @@ var (
 	Parede     = Elemento{'▤', CorParede, CorFundoParede, true}
 	Vegetacao  = Elemento{'♣', CorVerde, CorPadrao, false}
 	Vazio      = Elemento{' ', CorPadrao, CorPadrao, false}
-	Armadilha  = Elemento{'x', termbox.ColorRed, termbox.ColorDefault, false}
-	Cura       = Elemento{'♥', termbox.ColorGreen, termbox.ColorDefault, false}
+	Armadilha  = Elemento{'X', CorVermelho, CorPadrao, false}
+	Cura       = Elemento{'♥', CorVerde, CorPadrao, false}
+	Bau        = Elemento{'⌺', CorBau, CorPadrao, true}
+	BauAberto  = Elemento{'⍓', CorVermelho, CorPadrao, true}
+	Alcapao    = Elemento{'⍋', CorAzul, CorPadrao, false}
 )
 
 // Cria e retorna uma nova instância do jogo
 func jogoNovo() Jogo {
 	// O ultimo elemento visitado é inicializado como vazio
 	// pois o jogo começa com o personagem em uma posição vazia
-	return Jogo{UltimoVisitado: Vazio,
-		Vida: 10}
+	return Jogo{UltimoVisitado: Vazio, Vida: 10, ChaveCapturada: false}
 }
 
 // Lê um arquivo texto linha por linha e constrói o mapa do jogo
@@ -108,11 +113,13 @@ func jogoCarregarMapa(nome string, jogo *Jogo) error {
 	// Adiciona as armadilhas e pontos de cura em posições aleatórias
 	for i := 0; i < 6; i++ {
 		posicionarAleatoriamente(jogo, Armadilha)
+		posicionarAleatoriamente(jogo, Bau)
 	}
 	for i := 0; i < 3; i++ {
 		posicionarAleatoriamente(jogo, Cura)
 	}
 
+	posicionarAleatoriamente(jogo, Alcapao)
 	return nil
 }
 
@@ -174,7 +181,7 @@ func curar(jogo *Jogo) {
 	curaX, curaY := jogo.PosX, jogo.PosY
 
 	go func() {
-		jogo.StatusMsg = "Você está em um ponto de cura! Aguarde 3s para começar a curar..."
+		jogo.StatusMsg = "Você está em um ponto de cura! Aguarde 3s para comecar a curar..."
 		interfaceDesenharJogo(jogo)
 
 		time.Sleep(3 * time.Second)
@@ -213,7 +220,13 @@ func curar(jogo *Jogo) {
 
 func gameOver(jogo *Jogo) {
 	jogo.mu.Lock()
-	jogo.StatusMsg = "GAME OVER! Pressione ESC para sair."
+	if jogo.ChaveCapturada {
+		jogo.StatusMsg = "Voce GANHOU! PARABENS!!!!! Pressione ESC para sair."
+	} else if jogo.Vida <= 0 {
+		jogo.StatusMsg = "Voce PERDEU! Mais sorte na proxima! Pressione ESC para sair."
+	} else {
+		jogo.StatusMsg = "GAME OVER! Pressione ESC para sair."
+	}
 	jogo.mu.Unlock()
 	interfaceDesenharJogo(jogo)
 
@@ -234,6 +247,44 @@ func posicionarAleatoriamente(jogo *Jogo, elemento Elemento) {
 		if jogo.Mapa[y][x].simbolo == Vazio.simbolo {
 			jogo.Mapa[y][x] = elemento
 			return
+		}
+	}
+}
+
+func podeSair(jogo *Jogo) {
+	if jogo.ChaveCapturada {
+		jogo.StatusMsg = "Parabens, voce conseguiu sair!"
+		time.Sleep(3 * time.Second)
+		gameOver(jogo)
+	} else {
+		jogo.StatusMsg = "Voce nao pode sair, voce nao encontrou a Cave"
+	}
+
+}
+
+func abrirBau(jogo *Jogo, x, y int) {
+	jogo.mu.RLock()
+	defer jogo.mu.RUnlock()
+
+	jogo.Mapa[y][x] = BauAberto
+	bausAbertos += 1
+
+	if ((rand.Intn(100) < 30) || (bausAbertos == 6)) && !jogo.ChaveCapturada {
+		jogo.StatusMsg = "CHAVE ENCONTRADA!"
+		jogo.ChaveCapturada = true
+	} else {
+		switch rand.Intn(2) {
+		case 0:
+			jogo.StatusMsg = "O bau esta vazio"
+			time.Sleep(3 * time.Second)
+		case 1:
+			jogo.Vida -= 1
+			jogo.StatusMsg = "Tinha uma armadilha no Bau"
+			time.Sleep(3 * time.Second)
+			if jogo.Vida <= 0 {
+				gameOver(jogo)
+			}
+
 		}
 	}
 }

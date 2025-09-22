@@ -7,10 +7,14 @@ import "fmt"
 func personagemMover(tecla rune, jogo *Jogo) {
 	dx, dy := 0, 0
 	switch tecla {
-	case 'w': dy = -1 // Move para cima
-	case 'a': dx = -1 // Move para a esquerda
-	case 's': dy = 1  // Move para baixo
-	case 'd': dx = 1  // Move para a direita
+	case 'w':
+		dy = -1 // Move para cima
+	case 'a':
+		dx = -1 // Move para a esquerda
+	case 's':
+		dy = 1 // Move para baixo
+	case 'd':
+		dx = 1 // Move para a direita
 	}
 
 	nx, ny := jogo.PosX+dx, jogo.PosY+dy
@@ -25,8 +29,34 @@ func personagemMover(tecla rune, jogo *Jogo) {
 // Neste exemplo, apenas exibe uma mensagem de status
 // Você pode expandir essa função para incluir lógica de interação com objetos
 func personagemInteragir(jogo *Jogo) {
-	// Atualmente apenas exibe uma mensagem de status
-	jogo.StatusMsg = fmt.Sprintf("Interagindo em (%d, %d)", jogo.PosX, jogo.PosY)
+	jogo.mu.RLock()
+	px, py := jogo.PosX, jogo.PosY
+	jogo.mu.RUnlock()
+
+	posicoesParaVerificar := [][2]int{
+		{px, py - 1}, // Cima
+		{px, py + 1}, // Baixo
+		{px - 1, py}, // Esquerda
+		{px + 1, py}, // Direita
+	}
+	for _, pos := range posicoesParaVerificar {
+		x, y := pos[0], pos[1]
+
+		if y >= 0 && y < len(jogo.Mapa) && x >= 0 && x < len(jogo.Mapa[y]) {
+			jogo.mu.RLock()
+			simboloNoLocal := jogo.Mapa[y][x].simbolo
+			jogo.mu.RUnlock()
+
+			if simboloNoLocal == Bau.simbolo {
+				jogo.StatusMsg = fmt.Sprintf("Abrindo baú em (%d, %d)...", x, y)
+				abrirBau(jogo, x, y)
+				return
+			}
+			if simboloNoLocal == BauAberto.simbolo {
+				jogo.StatusMsg = "Este baú já foi aberto."
+			}
+		}
+	}
 }
 
 // Processa o evento do teclado e executa a ação correspondente
