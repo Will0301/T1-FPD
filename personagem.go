@@ -7,25 +7,39 @@ import "fmt"
 func personagemMover(tecla rune, jogo *Jogo) {
 	dx, dy := 0, 0
 	switch tecla {
-	case 'w': dy = -1 // Move para cima
-	case 'a': dx = -1 // Move para a esquerda
-	case 's': dy = 1  // Move para baixo
-	case 'd': dx = 1  // Move para a direita
+	case 'w':
+		dy = -1 // Move para cima
+	case 'a':
+		dx = -1 // Move para a esquerda
+	case 's':
+		dy = 1 // Move para baixo
+	case 'd':
+		dx = 1 // Move para a direita
+	default:
+		return // Não é uma tecla de movimento, não faz nada
 	}
 
 	nx, ny := jogo.PosX+dx, jogo.PosY+dy
-	// Verifica se o movimento é permitido e realiza a movimentação
-	if jogoPodeMoverPara(jogo, nx, ny) {
-		jogoMoverElemento(jogo, jogo.PosX, jogo.PosY, dx, dy)
-		jogo.PosX, jogo.PosY = nx, ny
+
+	// --- MODIFICADO: Usa o canal do mapa para mover de forma segura ---
+	resposta := make(chan bool)
+	acao := AcaoMapa{
+		Tipo:     TipoMoverJogador,
+		DestinoX: nx,
+		DestinoY: ny,
+		Resposta: resposta,
 	}
+
+	// Envia a solicitação de movimento para o gerenciador do mapa
+	jogo.CanalMapa <- acao
+
+	// Aguarda a resposta. A posição do personagem (jogo.PosX/Y)
+	// será atualizada dentro da goroutine 'processaMapa' se o movimento for válido.
+	<-resposta
 }
 
 // Define o que ocorre quando o jogador pressiona a tecla de interação
-// Neste exemplo, apenas exibe uma mensagem de status
-// Você pode expandir essa função para incluir lógica de interação com objetos
 func personagemInteragir(jogo *Jogo) {
-	// Atualmente apenas exibe uma mensagem de status
 	jogo.StatusMsg = fmt.Sprintf("Interagindo em (%d, %d)", jogo.PosX, jogo.PosY)
 }
 
@@ -33,13 +47,10 @@ func personagemInteragir(jogo *Jogo) {
 func personagemExecutarAcao(ev EventoTeclado, jogo *Jogo) bool {
 	switch ev.Tipo {
 	case "sair":
-		// Retorna false para indicar que o jogo deve terminar
-		return false
+		return false // Indica que o jogo deve terminar
 	case "interagir":
-		// Executa a ação de interação
 		personagemInteragir(jogo)
 	case "mover":
-		// Move o personagem com base na tecla
 		personagemMover(ev.Tecla, jogo)
 	}
 	return true // Continua o jogo
