@@ -33,32 +33,34 @@ func main() {
 			break
 		}
 
-		// A verificação de dano e cura funciona de forma segura, pois a ação de mover
-		// no canal bloqueia até que 'jogo.UltimoVisitado' seja atualizado.
-		if jogo.UltimoVisitado.simbolo == 'x' {
+		// A vida do personagem não mudava porque o símbolo do mapa era sobrescrito
+		// antes de ser verificado. A correção é verificar o elemento que o personagem
+		// acabou de pisar, que está armazenado em "UltimoVisitado".
+		if jogo.UltimoVisitado.simbolo == Armadilha.simbolo {
 			res := make(chan bool)
 			canalJogo <- AcoesJogo{Acao: "dano", Valor: 3, Resposta: res}
 			<-res
-			// --- CORRIGIDO: Solicita um redesenho de forma segura ---
 			select {
 			case jogo.CanalRedesenhar <- true:
 			default: // Não bloqueia se já houver uma solicitação pendente
 			}
 		}
 
-		if jogo.UltimoVisitado.simbolo == '♥' {
+		// Verifica se o jogador se moveu para um ponto de cura
+		if jogo.UltimoVisitado.simbolo == Cura.simbolo {
 			curar(&jogo)
 		}
 
-		// A chamada de interfaceDesenharJogo() foi removida daqui,
-		// pois o gerenciador 'processaMapa' agora centraliza todos os redesenhos.
+		if jogo.UltimoVisitado.simbolo == Alcapao.simbolo {
+			podeSair(&jogo)
+		}
 
 		// Verifica se a vida chegou a 0 para encerrar o jogo
 		jogo.mu.RLock()
 		if jogo.Vida <= 0 {
 			jogo.mu.RUnlock()
 			gameOver(&jogo)
-			return // Encerra a função main e o programa
+			return
 		}
 		jogo.mu.RUnlock()
 	}
