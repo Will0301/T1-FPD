@@ -33,15 +33,19 @@ func main() {
 		// A vida do personagem não mudava porque o símbolo do mapa era sobrescrito
 		// antes de ser verificado. A correção é verificar o elemento que o personagem
 		// acabou de pisar, que está armazenado em "UltimoVisitado".
-		if jogo.UltimoVisitado.simbolo == 'x' {
+		if jogo.UltimoVisitado.simbolo == Armadilha.simbolo {
 			res := make(chan bool)
 			canalJogo <- AcoesJogo{Acao: "dano", Valor: 3, Resposta: res}
 			<-res
 		}
 
 		// Verifica se o jogador se moveu para um ponto de cura
-		if jogo.UltimoVisitado.simbolo == '♥' {
+		if jogo.UltimoVisitado.simbolo == Cura.simbolo {
 			curar(&jogo)
+		}
+
+		if jogo.UltimoVisitado.simbolo == Alcapao.simbolo {
+			podeSair(&jogo)
 		}
 
 		interfaceDesenharJogo(&jogo)
