@@ -274,9 +274,8 @@ func curar(jogo *Jogo) {
 
 			// Envia o pedido de cura.
 			res := make(chan bool)
-			canalJogo <- AcoesJogo{Acao: "cura", Valor: 1, Resposta: res}:
-				<-res
-
+			canalJogo <- AcoesJogo{Acao: "cura", Valor: 1, Resposta: res}
+			<-res
 
 			jogo.mu.RLock()
 			vidaAtual = jogo.Vida
