@@ -220,7 +220,13 @@ func curar(jogo *Jogo) {
 
 func gameOver(jogo *Jogo) {
 	jogo.mu.Lock()
-	jogo.StatusMsg = "GAME OVER! Pressione ESC para sair."
+	if jogo.ChaveCapturada {
+		jogo.StatusMsg = "Voce GANHOU! PARABENS!!!!! Pressione ESC para sair."
+	} else if jogo.Vida <= 0 {
+		jogo.StatusMsg = "Voce PERDEU! Mais sorte na proxima! Pressione ESC para sair."
+	} else {
+		jogo.StatusMsg = "GAME OVER! Pressione ESC para sair."
+	}
 	jogo.mu.Unlock()
 	interfaceDesenharJogo(jogo)
 
