@@ -15,14 +15,26 @@ func personagemMover(tecla rune, jogo *Jogo) {
 		dy = 1 // Move para baixo
 	case 'd':
 		dx = 1 // Move para a direita
+	default:
+		return // Não é uma tecla de movimento, não faz nada
 	}
 
 	nx, ny := jogo.PosX+dx, jogo.PosY+dy
-	// Verifica se o movimento é permitido e realiza a movimentação
-	if jogoPodeMoverPara(jogo, nx, ny) {
-		jogoMoverElemento(jogo, jogo.PosX, jogo.PosY, dx, dy)
-		jogo.PosX, jogo.PosY = nx, ny
+
+	resposta := make(chan bool)
+	acao := AcaoMapa{
+		Tipo:     TipoMoverJogador,
+		DestinoX: nx,
+		DestinoY: ny,
+		Resposta: resposta,
 	}
+
+	// Envia a solicitação de movimento para o gerenciador do mapa
+	jogo.CanalMapa <- acao
+
+	// Aguarda a resposta. A posição do personagem (jogo.PosX/Y)
+	// será atualizada dentro da goroutine 'processaMapa' se o movimento for válido.
+	<-resposta
 }
 
 // Define o que ocorre quando o jogador pressiona a tecla de interação
@@ -63,8 +75,7 @@ func personagemInteragir(jogo *Jogo) {
 func personagemExecutarAcao(ev EventoTeclado, jogo *Jogo) bool {
 	switch ev.Tipo {
 	case "sair":
-		// Retorna false para indicar que o jogo deve terminar
-		return false
+		return false // Indica que o jogo deve terminar
 	case "interagir":
 		// Executa a ação de interação
 		personagemInteragir(jogo)

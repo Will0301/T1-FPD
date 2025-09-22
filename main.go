@@ -18,14 +18,17 @@ func main() {
 		panic(err)
 	}
 
-	// Inicia processador
+	// Inicia os processadores concorrentes do jogo
 	go processaJogo(&jogo)
+	go processaMapa(&jogo)
 
+	// Desenha o estado inicial do jogo
 	interfaceDesenharJogo(&jogo)
 
 	for {
 		evento := interfaceLerEventoTeclado()
 
+		// Sai do loop se a ação retornar 'false' (pressionou ESC)
 		if !personagemExecutarAcao(evento, &jogo) {
 			break
 		}
@@ -37,6 +40,10 @@ func main() {
 			res := make(chan bool)
 			canalJogo <- AcoesJogo{Acao: "dano", Valor: 3, Resposta: res}
 			<-res
+			select {
+			case jogo.CanalRedesenhar <- true:
+			default: // Não bloqueia se já houver uma solicitação pendente
+			}
 		}
 
 		// Verifica se o jogador se moveu para um ponto de cura
@@ -47,8 +54,6 @@ func main() {
 		if jogo.UltimoVisitado.simbolo == Alcapao.simbolo {
 			podeSair(&jogo)
 		}
-
-		interfaceDesenharJogo(&jogo)
 
 		// Verifica se a vida chegou a 0 para encerrar o jogo
 		jogo.mu.RLock()
