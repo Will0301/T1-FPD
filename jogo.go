@@ -204,8 +204,16 @@ func curar(jogo *Jogo) {
 
 			// Envia o pedido de cura.
 			res := make(chan bool)
-			canalJogo <- AcoesJogo{Acao: "cura", Valor: 1, Resposta: res}
-			<-res
+			timeout := time.After(500 * time.Millisecond) // Define um timeout de 500ms
+
+			select {
+			case canalJogo <- AcoesJogo{Acao: "cura", Valor: 1, Resposta: res}:
+				<-res
+			case <-timeout:
+				jogo.StatusMsg = "O sistema de cura está lento..."
+				interfaceDesenharJogo(jogo)
+				continue
+			}
 
 			jogo.mu.RLock()
 			vidaAtual = jogo.Vida
