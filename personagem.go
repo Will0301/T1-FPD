@@ -31,15 +31,9 @@ func personagemMover(tecla rune, jogo *Jogo) {
 
 	// Envia a solicitação de movimento para o gerenciador do mapa
 	jogo.CanalMapa <- acao
-
-	// Aguarda a resposta. A posição do personagem (jogo.PosX/Y)
-	// será atualizada dentro da goroutine 'processaMapa' se o movimento for válido.
 	<-resposta
 }
 
-// Define o que ocorre quando o jogador pressiona a tecla de interação
-// Neste exemplo, apenas exibe uma mensagem de status
-// Você pode expandir essa função para incluir lógica de interação com objetos
 func personagemInteragir(jogo *Jogo) {
 	jogo.mu.RLock()
 	px, py := jogo.PosX, jogo.PosY

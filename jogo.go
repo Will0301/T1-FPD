@@ -142,7 +142,6 @@ func jogoCarregarMapa(nome string, jogo *Jogo) error {
 	// Transmite a posição inicial do jogador para todos os inimigos
 	initialPos := PosicaoJogador{X: jogo.PosX, Y: jogo.PosY}
 	for _, inimigo := range jogo.Inimigos {
-		// --- CORRIGIDO: Acessa os campos públicos com letra maiúscula ---
 		inimigo.UltimoXJogador = initialPos.X
 		inimigo.UltimoYJogador = initialPos.Y
 	}
@@ -173,11 +172,10 @@ func jogoPodeMoverPara(jogo *Jogo, x, y int) bool {
 		return false
 	}
 
-	// Pode mover para a posição
 	return true
 }
 
-// Esta é a única goroutine que pode desenhar na tela
+// goroutine que pode desenhar na tela
 func processaMapa(jogo *Jogo) {
 	for {
 		select {
@@ -213,7 +211,6 @@ func processaMapa(jogo *Jogo) {
 	}
 }
 
-// Não desenha mais na tela, apenas solicita o redesenho
 func processaJogo(jogo *Jogo) {
 	for req := range canalJogo {
 		jogo.mu.Lock()
@@ -292,7 +289,7 @@ func curar(jogo *Jogo) {
 
 func gameOver(jogo *Jogo) {
 	jogo.mu.Lock()
-	if jogo.ChaveCapturada {
+	if jogo.ChaveCapturada && jogo.Vida > 0 {
 		jogo.StatusMsg = "Voce GANHOU! PARABENS!!!!! Pressione ESC para sair."
 	} else if jogo.Vida <= 0 {
 		jogo.StatusMsg = "Voce PERDEU! Mais sorte na proxima! Pressione ESC para sair."
@@ -353,10 +350,6 @@ func abrirBau(jogo *Jogo, x, y int) {
 			jogo.Vida -= 1
 			jogo.StatusMsg = "Tinha uma armadilha no Bau"
 			time.Sleep(3 * time.Second)
-			if jogo.Vida <= 0 {
-				gameOver(jogo)
-			}
-
 		}
 	}
 }

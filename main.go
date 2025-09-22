@@ -33,9 +33,6 @@ func main() {
 			break
 		}
 
-		// A vida do personagem não mudava porque o símbolo do mapa era sobrescrito
-		// antes de ser verificado. A correção é verificar o elemento que o personagem
-		// acabou de pisar, que está armazenado em "UltimoVisitado".
 		if jogo.UltimoVisitado.simbolo == Armadilha.simbolo {
 			res := make(chan bool)
 			canalJogo <- AcoesJogo{Acao: "dano", Valor: 3, Resposta: res}
