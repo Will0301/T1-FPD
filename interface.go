@@ -73,6 +73,13 @@ func interfaceDesenharJogo(jogo *Jogo) {
 	// Desenha o personagem sobre o mapa
 	interfaceDesenharPersonagem(jogo.PosX, jogo.PosY, Personagem)
 
+	// Desenha jogadores remotos
+	jogadoresRemotos.RLock()
+	for _, j := range jogadoresRemotos.m {
+		termbox.SetCell(j.X, j.Y, '@', termbox.ColorYellow, CorPadrao)
+	}
+	jogadoresRemotos.RUnlock()
+
 	// Desenha a barra de status
 	interfaceDesenharBarraDeStatus(jogo)
 

@@ -31,7 +31,9 @@ func personagemMover(tecla rune, jogo *Jogo) {
 
 	// Envia a solicitação de movimento para o gerenciador do mapa
 	jogo.CanalMapa <- acao
-	<-resposta
+	if ok := <-resposta; ok && clienteRPC != nil {
+		clienteRPC.EnviarAtualizacao(jogo.PosX, jogo.PosY, jogo.Vida)
+	}
 }
 
 func personagemInteragir(jogo *Jogo) {
@@ -74,9 +76,8 @@ func personagemExecutarAcao(ev EventoTeclado, jogo *Jogo) bool {
 		// Executa a ação de interação
 		personagemInteragir(jogo)
 	case "mover":
-		// Move o personagem com base na tecla
-		clienteRPC.EnviarAtualizacao(jogo.PosX, jogo.PosY, jogo.Vida)
 		personagemMover(ev.Tecla, jogo)
+		// Move o personagem com base na tecla
 	}
 	return true // Continua o jogo
 }

@@ -14,10 +14,12 @@ type AtualizarArgs struct {
 	Nome string
 	X, Y int
 	Vida int
+	Seq  uint64
 }
 
 type AtualizarResp struct {
 	Mensagem string
+	Seq      uint64
 }
 
 type EstadoArgs struct{}

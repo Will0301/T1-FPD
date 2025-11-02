@@ -78,6 +78,8 @@ var clienteRPC *ClienteRPC
 // Canal de comunicação
 var canalJogo = make(chan AcoesJogo)
 
+var jogoAtual *Jogo
+
 // Elementos visuais do jogo
 var (
 	Personagem      = Boneco{'☺', termbox.ColorCyan, CorPadrao, true}
@@ -353,5 +355,15 @@ func abrirBau(jogo *Jogo, x, y int) {
 			jogo.StatusMsg = "Tinha uma armadilha no Bau"
 			time.Sleep(3 * time.Second)
 		}
+	}
+}
+
+func solicitarRedesenho() {
+	if jogoAtual == nil {
+		return
+	}
+	select {
+	case jogoAtual.CanalRedesenhar <- true:
+	default:
 	}
 }

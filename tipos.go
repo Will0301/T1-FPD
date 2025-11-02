@@ -1,6 +1,11 @@
 package main
 
-import "jogo/internal/rpcproto"
+import (
+	"sync"
+	"time"
+
+	"jogo/internal/rpcproto"
+)
 
 type (
 	RegistrarArgs = rpcproto.RegistrarArgs
@@ -11,3 +16,15 @@ type (
 	Jogador       = rpcproto.Jogador
 	EstadoResp    = rpcproto.EstadoResp
 )
+
+type JogadorRemoto struct {
+	Nome   string
+	X, Y   int
+	Vida   int
+	Ultimo time.Time
+}
+
+var jogadoresRemotos struct {
+	sync.RWMutex
+	m map[string]JogadorRemoto
+}

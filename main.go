@@ -1,25 +1,28 @@
 package main
 
 import (
-	"os"
-	"log"
-    "math/rand"
-    "time"
 	"fmt"
+	"log"
+	"math/rand"
+	"os"
+	"time"
 )
 
 func main() {
+	jogadoresRemotos.m = make(map[string]JogadorRemoto)
+
 	interfaceIniciar()
 	defer interfaceFinalizar()
 
 	rand.Seed(time.Now().UnixNano())
-    idJogador := fmt.Sprintf("Jogador-%d-%d", time.Now().UnixNano(), rand.Intn(1000))
-	
+	idJogador := fmt.Sprintf("Jogador-%d-%d", time.Now().UnixNano(), rand.Intn(1000))
+
 	var err error
 	clienteRPC, err = NovoClienteRPC("localhost:8080", idJogador)
 	if err != nil {
 		log.Fatal(err)
 	}
+	clienteRPC.AtualizarEstado()
 
 	mapaFile := "mapa.txt"
 	if len(os.Args) > 1 {
@@ -27,13 +30,29 @@ func main() {
 	}
 
 	jogo := jogoNovo()
-	if err := jogoCarregarMapa(mapaFile, &jogo); err != nil {
-		panic(err)
+	jogoAtual = &jogo
+	jogoCarregarMapa(mapaFile, &jogo)
+
+	if clienteRPC != nil {
+		clienteRPC.EnviarAtualizacao(jogo.PosX, jogo.PosY, jogo.Vida)
 	}
 
 	// Inicia os processadores concorrentes do jogo
 	go processaJogo(&jogo)
 	go processaMapa(&jogo)
+
+	go func() {
+		t := time.NewTicker(3 * time.Second)
+		defer t.Stop()
+		for range t.C {
+			jogo.mu.RLock()
+			x, y, vida := jogo.PosX, jogo.PosY, jogo.Vida
+			jogo.mu.RUnlock()
+			if clienteRPC != nil {
+				clienteRPC.EnviarAtualizacao(x, y, vida)
+			}
+		}
+	}()
 
 	// Desenha o estado inicial do jogo
 	interfaceDesenharJogo(&jogo)
