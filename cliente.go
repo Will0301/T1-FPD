@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/rpc"
 	"time"
 )
@@ -22,7 +22,6 @@ func NovoClienteRPC(endereco, nome string) (*ClienteRPC, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(resp.Mensagem)
 	return cli, nil
 }
 
@@ -30,8 +29,9 @@ func (c *ClienteRPC) EnviarAtualizacao(x, y, vida int) {
 	var resp AtualizarResp
 	args := AtualizarArgs{Nome: c.Nome, X: x, Y: y, Vida: vida}
 	err := c.conexao.Call("Servidor.Atualizar", args, &resp)
-	if err == nil {
-		fmt.Println(resp.Mensagem)
+	if err != nil {
+		log.Printf("erro ao enviar atualizacao: %v", err)
+		return
 	}
 }
 
@@ -40,11 +40,8 @@ func (c *ClienteRPC) AtualizarEstado() {
 		for {
 			var resp EstadoResp
 			err := c.conexao.Call("Servidor.ObterEstado", EstadoArgs{}, &resp)
-			if err == nil {
-				fmt.Println("Jogadores conectados:")
-				for _, j := range resp.Jogadores {
-					fmt.Printf(" - %s (%d,%d) vida=%d\n", j.Nome, j.X, j.Y, j.Vida)
-				}
+			if err != nil {
+				log.Printf("erro ao obter estado: %v", err)
 			}
 			time.Sleep(2 * time.Second)
 		}
