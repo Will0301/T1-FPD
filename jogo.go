@@ -73,6 +73,8 @@ type Jogo struct {
 
 var bausAbertos = 0
 
+var clienteRPC *ClienteRPC
+
 // Canal de comunicação
 var canalJogo = make(chan AcoesJogo)
 

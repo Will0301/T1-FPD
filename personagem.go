@@ -75,6 +75,7 @@ func personagemExecutarAcao(ev EventoTeclado, jogo *Jogo) bool {
 		personagemInteragir(jogo)
 	case "mover":
 		// Move o personagem com base na tecla
+		clienteRPC.EnviarAtualizacao(jogo.PosX, jogo.PosY, jogo.Vida)
 		personagemMover(ev.Tecla, jogo)
 	}
 	return true // Continua o jogo

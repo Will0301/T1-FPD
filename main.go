@@ -2,11 +2,24 @@ package main
 
 import (
 	"os"
+	"log"
+    "math/rand"
+    "time"
+	"fmt"
 )
 
 func main() {
 	interfaceIniciar()
 	defer interfaceFinalizar()
+
+	rand.Seed(time.Now().UnixNano())
+    idJogador := fmt.Sprintf("Jogador-%d-%d", time.Now().UnixNano(), rand.Intn(1000))
+	
+	var err error
+	clienteRPC, err = NovoClienteRPC("localhost:8080", idJogador)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	mapaFile := "mapa.txt"
 	if len(os.Args) > 1 {
