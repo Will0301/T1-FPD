@@ -19,22 +19,25 @@ func NovoClienteRPC(endereco, nome string) (*ClienteRPC, error) {
 	}
 	cli := &ClienteRPC{conexao: c, Nome: nome}
 	var resp RegistrarResp
-	err = c.Call("Servidor.Registrar", RegistrarArgs{Nome: nome}, &resp)
+	err = retryRPC(func() error {
+		return c.Call("Servidor.Registrar", RegistrarArgs{Nome: nome}, &resp)
+	})
 	if err != nil {
 		return nil, err
 	}
 	return cli, nil
 }
 
-func (c *ClienteRPC) EnviarAtualizacao(x, y, vida int) {
+func (c *ClienteRPC) EnviarAtualizacao(x, y, vida int, chave bool) error {
 	var resp AtualizarResp
 	c.seq++
 	args := AtualizarArgs{
-		Nome: c.Nome,
-		X:    x,
-		Y:    y,
-		Vida: vida,
-		Seq:  c.seq,
+		Nome:  c.Nome,
+		X:     x,
+		Y:     y,
+		Vida:  vida,
+		Chave: chave,
+		Seq:   c.seq,
 	}
 
 	err := retryRPC(func() error {
@@ -43,6 +46,8 @@ func (c *ClienteRPC) EnviarAtualizacao(x, y, vida int) {
 	if err != nil {
 		log.Printf("erro ao enviar atualizacao: %v", err)
 	}
+
+	return err
 }
 
 func retryRPC(fn func() error) error {

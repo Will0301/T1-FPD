@@ -21,6 +21,7 @@ type JogadorRemoto struct {
 	Nome   string
 	X, Y   int
 	Vida   int
+	Chave  bool
 	Ultimo time.Time
 }
 

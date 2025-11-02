@@ -75,8 +75,11 @@ func interfaceDesenharJogo(jogo *Jogo) {
 
 	// Desenha jogadores remotos
 	jogadoresRemotos.RLock()
+	i := 0
 	for _, j := range jogadoresRemotos.m {
 		termbox.SetCell(j.X, j.Y, '@', termbox.ColorYellow, CorPadrao)
+		interfaceDesenhaDadosJogadores(j, jogo, 4+i)
+		i += 1
 	}
 	jogadoresRemotos.RUnlock()
 
@@ -84,7 +87,7 @@ func interfaceDesenharJogo(jogo *Jogo) {
 	interfaceDesenharBarraDeStatus(jogo)
 
 	// Mostra a vida do boneco
-	interfaceMostraVida(jogo)
+	interfaceMostraDados(jogo)
 
 	// Força a atualização do terminal
 	interfaceAtualizarTela()
@@ -110,7 +113,7 @@ func interfaceDesenharPersonagem(x, y int, elem Boneco) {
 }
 
 // Exibe a vida do jogador na tela
-func interfaceMostraVida(jogo *Jogo) {
+func interfaceMostraDados(jogo *Jogo) {
 	// Usa um RLock para leitura segura da variável compartilhada "Vida"
 	jogo.mu.RLock()
 	vidaStr := strconv.Itoa(jogo.Vida)
@@ -120,7 +123,7 @@ func interfaceMostraVida(jogo *Jogo) {
 	}
 	jogo.mu.RUnlock()
 
-	texto := "Vida: " + vidaStr
+	texto := "Vida: " + vidaStr + "; Chave: " + strconv.FormatBool(jogo.ChaveCapturada)
 	y := len(jogo.Mapa) + 2
 
 	for i, r := range []rune(texto) {
@@ -139,5 +142,21 @@ func interfaceDesenharBarraDeStatus(jogo *Jogo) {
 	msg := "Use WASD para mover e E para interagir. ESC para sair."
 	for i, c := range msg {
 		termbox.SetCell(i, len(jogo.Mapa)+3, c, CorTexto, CorPadrao)
+	}
+}
+
+func interfaceDesenhaDadosJogadores(jogador JogadorRemoto, jogo *Jogo, pos int) {
+	// Usa um RLock para leitura segura da variável compartilhada "Vida"
+	vidaStr := strconv.Itoa(jogador.Vida)
+	fg := CorVerde
+	if jogador.Vida <= 3 {
+		fg = CorVermelho
+	}
+
+	texto := "Jogador: " + jogador.Nome + "Vida: " + vidaStr + "; Chave: " + strconv.FormatBool(jogador.Chave)
+	y := len(jogo.Mapa) + pos
+
+	for i, r := range []rune(texto) {
+		termbox.SetCell(i, y, r, fg, CorPadrao)
 	}
 }

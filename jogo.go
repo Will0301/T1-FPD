@@ -349,11 +349,11 @@ func abrirBau(jogo *Jogo, x, y int) {
 		switch rand.Intn(2) {
 		case 0:
 			jogo.StatusMsg = "O bau esta vazio"
-			time.Sleep(3 * time.Second)
+			time.Sleep(500 * time.Millisecond)
 		case 1:
 			jogo.Vida -= 1
 			jogo.StatusMsg = "Tinha uma armadilha no Bau"
-			time.Sleep(3 * time.Second)
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 }

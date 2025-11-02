@@ -32,7 +32,14 @@ func personagemMover(tecla rune, jogo *Jogo) {
 	// Envia a solicitação de movimento para o gerenciador do mapa
 	jogo.CanalMapa <- acao
 	if ok := <-resposta; ok && clienteRPC != nil {
-		clienteRPC.EnviarAtualizacao(jogo.PosX, jogo.PosY, jogo.Vida)
+		err := retryRPC(func() error {
+			return clienteRPC.EnviarAtualizacao(jogo.PosX, jogo.PosY, jogo.Vida, jogo.ChaveCapturada)
+		})
+
+		if err != nil {
+			return
+		}
+
 	}
 }
 

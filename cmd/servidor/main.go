@@ -53,6 +53,7 @@ func (s *Servidor) Atualizar(args rpcproto.AtualizarArgs, resp *rpcproto.Atualiz
 			j.X = args.X
 			j.Y = args.Y
 			j.Vida = args.Vida
+			j.Chave = args.Chave
 			j.Ultimo = time.Now()
 			s.sequencias[args.Nome] = args.Seq
 			resp.Mensagem = "Atualizado"

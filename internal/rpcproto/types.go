@@ -11,10 +11,11 @@ type RegistrarResp struct {
 }
 
 type AtualizarArgs struct {
-	Nome string
-	X, Y int
-	Vida int
-	Seq  uint64
+	Nome  string
+	X, Y  int
+	Vida  int
+	Chave bool
+	Seq   uint64
 }
 
 type AtualizarResp struct {
@@ -28,6 +29,7 @@ type Jogador struct {
 	Nome   string
 	X, Y   int
 	Vida   int
+	Chave  bool
 	Ultimo time.Time
 }
 

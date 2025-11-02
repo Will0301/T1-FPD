@@ -31,10 +31,21 @@ func main() {
 
 	jogo := jogoNovo()
 	jogoAtual = &jogo
-	jogoCarregarMapa(mapaFile, &jogo)
+	err = retryRPC(func() error {
+		return jogoCarregarMapa(mapaFile, &jogo)
+	})
+
+	if err != nil {
+		return
+	}
 
 	if clienteRPC != nil {
-		clienteRPC.EnviarAtualizacao(jogo.PosX, jogo.PosY, jogo.Vida)
+		err = retryRPC(func() error {
+			return clienteRPC.EnviarAtualizacao(jogo.PosX, jogo.PosY, jogo.Vida, jogo.ChaveCapturada)
+		})
+		if err != nil {
+			return
+		}
 	}
 
 	// Inicia os processadores concorrentes do jogo
@@ -49,7 +60,12 @@ func main() {
 			x, y, vida := jogo.PosX, jogo.PosY, jogo.Vida
 			jogo.mu.RUnlock()
 			if clienteRPC != nil {
-				clienteRPC.EnviarAtualizacao(x, y, vida)
+				err = retryRPC(func() error {
+					return clienteRPC.EnviarAtualizacao(x, y, vida, jogo.ChaveCapturada)
+				})
+				if err != nil {
+					return
+				}
 			}
 		}
 	}()
